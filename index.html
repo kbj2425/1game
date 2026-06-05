@@ -100,12 +100,12 @@
     let isPaused = false;
     let nextUpgradeTime = 50; 
 
-    // 🏎️ 플레이어 물리 기반 변수 (속속도 vx, vy와 마찰력 friction 도입)
+    // 🏎️ 플레이어 능력치 밸런스 패치 (기본 이속 향상)
     let player = { 
         x: 220, y: 325, 
         size: 12, 
         vx: 0, vy: 0,      
-        maxSpeed: 4.5,    
+        maxSpeed: 4.8,    // 4.5 -> 4.8 상향
         friction: 0.82     
     };
     
@@ -125,12 +125,11 @@
     window.onload = function() {
         fetch('/api/leaderboard').then(res => res.json()).then(data => updateLeaderboardUI(data));
         
-        // ⌨️ 키보드 이벤트 리스너 교정 (한글/영문 대소문자 무관하게 key.toLowerCase() 처리)
         window.addEventListener('keydown', e => {
             const key = e.key.toLowerCase();
             keys[key] = true;
             if(["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)) {
-                e.preventDefault(); // 스크롤 방지
+                e.preventDefault(); 
             }
         });
 
@@ -180,7 +179,7 @@
     function updateWeaponStatusUI() {
         let activeList = [];
         for (let key in myWeapons) {
-            if(myWeapons[key] > 0) activeList.push(`${key.toUpperCase()} Lv.${myWeapons[key]}`);
+            if(myWeapons[key] > 0) activeList.push(`${key.toUpperCase()} AMMO`);
         }
         document.getElementById('w-list').innerText = activeList.join(' | ');
     }
@@ -236,7 +235,7 @@
     function gameUpdate() {
         if(isPaused) return;
 
-        // 🏎️ 물리 가속도 제어
+        // 물리 가속도 제어
         let ax = 0; let ay = 0;
         if (keys['arrowup'] || keys['w']) ay = -player.maxSpeed;
         if (keys['arrowdown'] || keys['s']) ay = player.maxSpeed;
@@ -255,14 +254,16 @@
         player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
         player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
 
-        // 2. 난이도 곡선 밸런서
-        let spawnChance = 0.025; let enemySpeed = 1.6;
-        if (score >= 60)  { spawnChance = 0.05;  enemySpeed = 2.3; }
+        // 📊 [초반 완화형 난이도 밸런서] 
+        let spawnChance = 0.013; // 0.025 -> 0.013 (초반 적 물량 절반으로 완화)
+        let enemySpeed = 1.2;    // 1.6 -> 1.2 (초반 적 속도 하향으로 무빙 생존 보장)
+        
+        if (score >= 60)  { spawnChance = 0.05;  enemySpeed = 2.3; } // 1분부터 원래 매운맛 시작
         if (score >= 420) { spawnChance = 0.10;  enemySpeed = 3.6; } 
         if (score >= 780) { spawnChance = 0.18;  enemySpeed = 5.2; } 
         if (score >= 1200){ gameOver(true); return; }
 
-        // 3. 적 유닛 출현
+        // 적 유닛 출현
         if (Math.random() < spawnChance) {
             let side = Math.floor(Math.random() * 4);
             let ex, ey;
@@ -276,10 +277,10 @@
         // 무기 로직 가동
         weaponAngle += 0.04;
 
-        // 무기 1: 블레이드
+        // 무기 1: 블레이드 (1레벨 기준 칼날 기본 개수 1 -> 2개로 버프 및 반경 조정)
         if(myWeapons.blade > 0) {
-            let bladeCount = myWeapons.blade;
-            let radius = 55 + (bladeCount * 3);
+            let bladeCount = myWeapons.blade + 1; // 무조건 기존보다 1개 더 많음 (1렙=2개, 5렙=6개)
+            let radius = 60 + (bladeCount * 2);
             for(let i=0; i<bladeCount; i++) {
                 let currentAngle = weaponAngle + (i * (Math.PI * 2 / bladeCount));
                 let bx = player.x + Math.cos(currentAngle) * radius;
@@ -375,7 +376,7 @@
             });
         });
 
-        // 고퀄리티 그래픽 렌더링
+        // 그래픽 렌더링
         ctx.fillStyle = "rgba(2, 2, 5, 0.25)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         particles.forEach(p => {
@@ -388,9 +389,10 @@
         pGrad.addColorStop(0, '#ffffff'); pGrad.addColorStop(1, '#00f2fe'); ctx.fillStyle = pGrad;
         ctx.beginPath(); ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill(); ctx.restore();
 
+        // 버프된 블레이드 비주얼 출력
         if(myWeapons.blade > 0) {
-            let bladeCount = myWeapons.blade;
-            let radius = 55 + (bladeCount * 3);
+            let bladeCount = myWeapons.blade + 1;
+            let radius = 60 + (bladeCount * 2);
             for(let i=0; i<bladeCount; i++) {
                 let currentAngle = weaponAngle + (i * (Math.PI * 2 / bladeCount));
                 let bx = player.x + Math.cos(currentAngle) * radius;
