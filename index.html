@@ -3,61 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROJECT 20</title>
+    <title>PROJECT 20 : THE LAST SENTINEL</title>
     <style>
-        body { background-color: #0d1117; color: #c9d1d9; font-family: 'Malgun Gothic', sans-serif; text-align: center; margin: 0; padding: 0; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Noto+Sans+KR:wght@400;700&display=swap');
+        
+        body { 
+            background-color: #050508; 
+            color: #e2e8f0; 
+            font-family: 'Noto Sans KR', sans-serif; 
+            text-align: center; 
+            margin: 0; padding: 0;
+            overflow: hidden;
+        }
         .container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
-        .box { background: #161b22; padding: 30px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        h1 { color: #58a6ff; margin-bottom: 20px; }
-        input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #30363d; background: #0d1117; color: white; text-align: center; }
-        button { padding: 10px 20px; border: none; border-radius: 5px; background: #238636; color: white; cursor: pointer; font-weight: bold; }
-        button:hover { background: #2ea043; }
-        canvas { border: 2px solid #58a6ff; background: #000; display: none; margin-top: 10px; }
-        table { width: 100%; margin-top: 15px; border-collapse: collapse; }
-        th, td { padding: 8px; border-bottom: 1px solid #30363d; text-align: center; }
-        th { color: #58a6ff; }
-        #ui-layer { display: none; color: #ff7b72; font-size: 20px; font-weight: bold; margin-top: 10px; }
+        
+        /* 메인 상자 디자인 */
+        .box { 
+            background: rgba(13, 17, 23, 0.85); 
+            padding: 40px; 
+            border-radius: 16px; 
+            border: 2px solid #1f293d; 
+            box-shadow: 0 0 30px rgba(0, 112, 243, 0.2);
+            backdrop-filter: blur(10px);
+            max-width: 450px;
+            width: 90%;
+        }
+        h1 { 
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        .subtitle { font-family: 'Orbitron', sans-serif; color: #64748b; font-size: 0.85rem; margin-bottom: 30px; letter-spacing: 2px;}
+        
+        /* 입력창 및 버튼 */
+        input { 
+            padding: 12px; margin: 8px 0; width: 80%; border-radius: 8px; 
+            border: 1px solid #334155; background: #0f172a; color: white; 
+            text-align: center; font-size: 1rem; transition: 0.3s;
+        }
+        input:focus { border-color: #00f2fe; outline: none; box-shadow: 0 0 10px rgba(0,242,254,0.5); }
+        
+        /* 무기 선택 카드 슬롯 */
+        .weapon-selection { display: flex; justify-content: space-between; margin: 20px 0; gap: 10px; }
+        .weapon-card {
+            flex: 1; background: #1e293b; border: 2px solid #334155; border-radius: 10px;
+            padding: 12px 5px; cursor: pointer; transition: 0.3s; font-size: 0.9rem;
+        }
+        .weapon-card:hover { border-color: #4facfe; background: #1e293b; transform: translateY(-3px); }
+        .weapon-card.selected { 
+            border-color: #00f2fe; background: rgba(0, 242, 254, 0.15); 
+            box-shadow: 0 0 15px rgba(0,242,254,0.4); 
+        }
+        .weapon-name { font-weight: bold; color: #f1f5f9; margin-bottom: 5px; }
+        .weapon-desc { font-size: 0.75rem; color: #94a3b8; }
+
+        button.start-btn { 
+            padding: 14px 40px; border: none; border-radius: 8px; 
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            color: #050508; cursor: pointer; font-weight: bold; font-size: 1.1rem;
+            font-family: 'Orbitron', sans-serif; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,242,254,0.4);
+        }
+        button.start-btn:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(0,242,254,0.6); }
+        
+        /* 캔버스 및 UI */
+        canvas { 
+            border: 2px solid #1e293b; border-radius: 8px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            display: none; background: #020205; 
+        }
+        #ui-layer { 
+            display: none; font-family: 'Orbitron', sans-serif; font-size: 24px; 
+            font-weight: 800; color: #00f2fe; text-shadow: 0 0 10px rgba(0,242,254,0.6); margin-bottom: 10px; 
+        }
+        
+        /* 랭킹 테이블 */
+        table { width: 100%; margin-top: 25px; border-collapse: collapse; font-size: 0.9rem;}
+        th, td { padding: 10px; border-bottom: 1px solid #1e293b; text-align: center; }
+        th { color: #38bdf8; font-weight: bold; }
+        tr:hover { background: rgba(255,255,255,0.02); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- 1. 로그인 창 -->
     <div id="login-box" class="box">
         <h1>PROJECT 20</h1>
-        <p>인류의 마지막 요원원, 생존 시간을 기록하라.</p>
-        <input type="text" id="studentId" placeholder="학번 (예: 10325)" maxlength="5"><br>
-        <input type="text" id="username" placeholder="이름 (예: 홍길동)"><br><br>
-        <button onclick="startGame()">게임 시작</button>
+        <div class="subtitle">THE LAST SENTINEL</div>
         
-        <h3>🏆 실시간 TOP 10 랭킹</h3>
+        <input type="text" id="studentId" placeholder="학번 (예: 10325)" maxlength="5"><br>
+        <input type="text" id="username" placeholder="이름 (예: 홍길동)"><br>
+        
+        <h3 style="text-align:left; margin-left:10%; margin-top:20px; font-size:1rem; color:#94a3b8;">▼ 무기 프로토콜 선택</h3>
+        <div class="weapon-selection">
+            <div class="weapon-card selected" onclick="selectWeapon('blade', this)">
+                <div class="weapon-name" style="color:#00f2fe;">BLADE</div>
+                <div class="weapon-desc">주변 회전 보호막<br>생존 특화</div>
+            </div>
+            <div class="weapon-card" onclick="selectWeapon('laser', this)">
+                <div class="weapon-name" style="color:#ff007f;">LASER</div>
+                <div class="weapon-desc">십자 관통 레이저<br>화력 특화</div>
+            </div>
+            <div class="weapon-card" onclick="selectWeapon('missile', this)">
+                <div class="weapon-name" style="color:#39ff14;">MISSILE</div>
+                <div class="weapon-desc">유도 미사일 폭발<br>추격 특화</div>
+            </div>
+        </div>
+        
+        <button class="start-btn" onclick="startGame()">ENGAGE</button>
+        
+        <h3 style="margin-top:35px; font-family:'Orbitron'; font-size:1.1rem; color:#38bdf8; letter-spacing:1px;">🏆 TOP 10 LEADERBOARD</h3>
         <table>
             <thead>
-                <tr><th>순위</th><th>학번</th><th>이름</th><th>생존 시간</th></tr>
+                <tr><th>RANK</th><th>ID</th><th>NAME</th><th>TIME</th></tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>
         </table>
     </div>
 
-    <!-- 2. 게임 화면 -->
-    <div id="ui-layer">시간: <span id="timer">00:00</span></div>
-    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="ui-layer">TIME <span id="timer">00:00</span></div>
+    <canvas id="gameCanvas" width="440" height="650"></canvas>
 </div>
 
 <script>
     let studentId, username;
+    let selectedWeaponType = 'blade'; // 기본 무기
     let canvas, ctx;
     let gameInterval, timerInterval;
-    let startTime;
-    let score = 0; // 초 단위 생존 시간
+    let startTime, score = 0;
 
-    // 게임에 필요한 객체들
-    let player = { x: 200, y: 300, size: 15, speed: 4 };
+    // 엔티티 관리
+    let player = { x: 220, y: 325, size: 12, speed: 4.5 };
     let enemies = [];
     let bullets = [];
+    let particles = []; // 간지나는 폭발 잔상용 배열
     let keys = {};
+    let weaponAngle = 0; // 블레이드 회전각
 
-    // 페이지 로드 시 랭킹 가져오기
     window.onload = function() {
         fetch('/api/leaderboard')
             .then(res => res.json())
@@ -67,64 +153,75 @@
         window.addEventListener('keyup', e => keys[e.key] = false);
     };
 
+    function selectWeapon(type, element) {
+        selectedWeaponType = type;
+        document.querySelectorAll('.weapon-card').forEach(card => card.classList.remove('selected'));
+        element.classList.add('selected');
+    }
+
     function startGame() {
         studentId = document.getElementById('studentId').value.trim();
         username = document.getElementById('username').value.trim();
 
         if(!studentId || !username) {
-            alert("학번과 이름을 올바르게 입력해주세요!");
+            alert("학번과 이름을 입력하십시오.");
             return;
         }
 
-        // UI 전환
         document.getElementById('login-box').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'block';
         canvas = document.getElementById('gameCanvas');
         canvas.style.display = 'block';
         ctx = canvas.getContext('2d');
 
-        // 변수 초기화
+        // 초기화
         startTime = Date.now();
-        enemies = [];
-        bullets = [];
-        player.x = 200; player.y = 300;
+        enemies = []; bullets = []; particles = []; score = 0;
+        player.x = canvas.width / 2; player.y = canvas.height / 2;
 
-        // 루프 시작
-        gameInterval = setInterval(gameUpdate, 1000 / 60); // 60FPS
+        gameInterval = setInterval(gameUpdate, 1000 / 60);
         timerInterval = setInterval(updateTimer, 1000);
     }
 
     function updateTimer() {
-        let elapsed = Math.floor((Date.now() - startTime) / 1000);
-        score = elapsed;
-        
-        let min = String(Math.floor(elapsed / 60)).padStart(2, '0');
-        let sec = String(elapsed % 60).padStart(2, '0');
+        score = Math.floor((Date.now() - startTime) / 1000);
+        let min = String(Math.floor(score / 60)).padStart(2, '0');
+        let sec = String(score % 60).padStart(2, '0');
         document.getElementById('timer').innerText = `${min}:${sec}`;
     }
 
+    // 이펙트용 파티클 생성 함수
+    function createExplosion(x, y, color) {
+        for(let i=0; i<8; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                alpha: 1, size: Math.random() * 3 + 1, color: color
+            });
+        }
+    }
+
     function gameUpdate() {
-        // 1. 플레이어 이동 (WASD 또는 방향키)
+        // 1. 키보드 이동
         if (keys['ArrowUp'] || keys['w'] || keys['W']) player.y -= player.speed;
         if (keys['ArrowDown'] || keys['s'] || keys['S']) player.y += player.speed;
         if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.x -= player.speed;
         if (keys['ArrowRight'] || keys['d'] || keys['D']) player.x += player.speed;
 
-        // 화면 테두리 제한
         player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
         player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
 
-        // 2. 시간대별 난이도 곡선 적용 (7분~13분 밸런스 단축 테스트용 수치)
-        // 실제 밸런스를 적용하기 위해 score(초)에 따라 스폰 확률 조정
-        let spawnChance = 0.02; // 기본 2%
-        let enemySpeed = 1.5;
+        // 2. 난이도 곡선 밸런싱 (사람들은 평균 7분 사망, 고수 13분 탈락 세팅)
+        let spawnChance = 0.025;
+        let enemySpeed = 1.6;
 
-        if (score >= 60) { spawnChance = 0.04; enemySpeed = 2.0; }  // 1분 경과
-        if (score >= 420) { spawnChance = 0.08; enemySpeed = 3.2; } // 7분 경과 (제1고비)
-        if (score >= 780) { spawnChance = 0.15; enemySpeed = 4.5; } // 13분 경과 (마의 구간)
-        if (score >= 1200) { gameOver(true); return; }              // 20분 정각 (강제 종료)
+        if (score >= 60)  { spawnChance = 0.045; enemySpeed = 2.2; }  // 1분
+        if (score >= 420) { spawnChance = 0.09;  enemySpeed = 3.5; }  // 7분 (마의 통곡의 벽)
+        if (score >= 780) { spawnChance = 0.16;  enemySpeed = 5.0; }  // 13분 (이동속도가 플레이어보다 빨라짐)
+        if (score >= 1200){ gameOver(true); return; }                 // 20분 (강제 폭격 엔딩)
 
-        // 3. 몬스터 스폰
+        // 3. 적 스폰
         if (Math.random() < spawnChance) {
             let side = Math.floor(Math.random() * 4);
             let ex, ey;
@@ -132,71 +229,159 @@
             else if(side === 1) { ex = Math.random() * canvas.width; ey = canvas.height + 10; }
             else if(side === 2) { ex = -10; ey = Math.random() * canvas.height; }
             else { ex = canvas.width + 10; ey = Math.random() * canvas.height; }
-            enemies.push({ x: ex, y: ey, size: 10, speed: enemySpeed });
+            enemies.push({ x: ex, y: ey, size: 9, speed: enemySpeed });
         }
 
-        // 4. 무기 자동 공격 (가장 가까운 적에게 탄환 발사)
-        if (Math.random() < 0.05 && enemies.length > 0) {
-            // 사방으로 퍼지는 에너지 탄환 4개 발as사
-            bullets.push({ x: player.x, y: player.y, dx: 0, dy: -4 });
-            bullets.push({ x: player.x, y: player.y, dx: 0, dy: 4 });
-            bullets.push({ x: player.x, y: player.y, dx: -4, dy: 0 });
-            bullets.push({ x: player.x, y: player.y, dx: 4, dy: 0 });
+        // 4. 무기별 공격 메커니즘
+        weaponAngle += 0.04; // 블레이드 회전용 변수
+        
+        if (selectedWeaponType === 'blade') {
+            // [BLADE]: 플레이어 주변을 감싸며 실시간 충돌 체크
+            let bx = player.x + Math.cos(weaponAngle) * 55;
+            let by = player.y + Math.sin(weaponAngle) * 55;
+            
+            enemies.forEach((e, eIdx) => {
+                let dist = Math.hypot(e.x - bx, e.y - by);
+                if(dist < e.size + 8) {
+                    createExplosion(e.x, e.y, "#00f2fe");
+                    enemies.splice(eIdx, 1);
+                }
+            });
+        } 
+        else if (selectedWeaponType === 'laser' && Math.random() < 0.04) {
+            // [LASER]: 십자 방향으로 뻗어나가는 펄스형 관통 레이저
+            bullets.push({ x: player.x, y: player.y, dx: 5, dy: 0, type: 'laser' });
+            bullets.push({ x: player.x, y: player.y, dx: -5, dy: 0, type: 'laser' });
+            bullets.push({ x: player.x, y: player.y, dx: 0, dy: 5, type: 'laser' });
+            bullets.push({ x: player.x, y: player.y, dx: 0, dy: -5, type: 'laser' });
+        } 
+        else if (selectedWeaponType === 'missile' && Math.random() < 0.03 && enemies.length > 0) {
+            // [MISSILE]: 가장 가까운 적을 유도 추적하는 스마트 미사일
+            bullets.push({ x: player.x, y: player.y, type: 'missile' });
         }
 
-        // 5. 투사체 이동 및 충돌
+        // 5. 투사체 이동 및 연산
         bullets.forEach((b, bIdx) => {
-            b.x += b.dx; b.y += b.dy;
-            // 화면 밖으로 나가면 삭제
-            if(b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(bIdx, 1);
+            if (b.type === 'laser') {
+                b.x += b.dx; b.y += b.dy;
+            } 
+            else if (b.type === 'missile') {
+                if(enemies.length > 0) {
+                    let target = enemies[0]; // 가장 먼저 스폰된 적 타겟팅
+                    let angle = Math.atan2(target.y - b.y, target.x - b.x);
+                    b.x += Math.cos(angle) * 6;
+                    b.y += Math.sin(angle) * 6;
+                } else {
+                    b.y -= 5;
+                }
+            }
+
+            // 화면 이탈 시 삭제
+            if(b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                bullets.splice(bIdx, 1);
+            }
         });
 
-        // 6. 몬스터 이동 및 충돌 검사
+        // 6. 파티클 이펙트 연산
+        particles.forEach((p, pIdx) => {
+            p.x += p.vx; p.y += p.vy; p.alpha -= 0.03;
+            if(p.alpha <= 0) particles.splice(pIdx, 1);
+        });
+
+        // 7. 적 인공지능 및 물리 충돌 검사
         enemies.forEach((e, eIdx) => {
-            // 플레이어를 향해 추적
             let dx = player.x - e.x;
             let dy = player.y - e.y;
-            let dist = Math.sqrt(dx*dx + dy*dy);
+            let dist = Math.hypot(dx, dy);
+            
+            // 13분 이후 하드코어 기믹: 적이 플레이어의 넉백 메커니즘을 무시하고 초고속 접근
             e.x += (dx / dist) * e.speed;
             e.y += (dy / dist) * e.speed;
 
-            // 플레이어와 충돌 시 사망 (게임 오버)
+            // 플레이어 충돌 -> 즉사
             if (dist < player.size + e.size) {
                 gameOver(false);
             }
 
-            // 총알과 충돌 시 몬스터 소멸
+            // 탄환 충돌 체크
             bullets.forEach((b, bIdx) => {
-                let bDx = b.x - e.x;
-                let bDy = b.y - e.y;
-                let bDist = Math.sqrt(bDx*bDx + bDy*bDy);
-                if (bDist < e.size + 5) {
-                    enemies.splice(eIdx, 1);
-                    bullets.splice(bIdx, 1);
+                let bDist = Math.hypot(b.x - e.x, b.y - e.y);
+                if (bDist < e.size + 6) {
+                    if (b.type === 'missile') {
+                        // 미사일은 스플래시 폭발 반경 이펙트 부여
+                        createExplosion(e.x, e.y, "#39ff14");
+                        enemies.splice(eIdx, 1);
+                        bullets.splice(bIdx, 1);
+                    } else if (b.type === 'laser') {
+                        // 레이저는 관통하므로 총알을 지우지 않음
+                        createExplosion(e.x, e.y, "#ff007f");
+                        enemies.splice(eIdx, 1);
+                    }
                 }
             });
         });
 
-        // 7. 그리기 (Rendering)
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // 8. 렌더링 (간지나는 셰이더 대용 글로우 기법 적용)
+        ctx.fillStyle = "rgba(2, 2, 5, 0.3)"; // 잔상 효과용 블러 필터 적용
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 플레이어 그리기 (네온 블루 박스)
-        ctx.fillStyle = "#58a6ff";
-        ctx.shadowBlur = 10; ctx.shadowColor = "#58a6ff";
-        ctx.fillRect(player.x - player.size, player.y - player.size, player.size*2, player.size*2);
+        // [렌더] 파티클 이펙트
+        particles.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        });
 
-        // 총알 그리기 (네온 그린 원)
-        ctx.fillStyle = "#39ff14"; ctx.shadowColor = "#39ff14";
+        // [렌더] 플레이어 코어 (그라데이션 원형 아크)
+        ctx.save();
+        ctx.shadowBlur = 15; ctx.shadowColor = "#00f2fe";
+        let playerGrad = ctx.createRadialGradient(player.x, player.y, 2, player.x, player.y, player.size);
+        playerGrad.addColorStop(0, '#ffffff');
+        playerGrad.addColorStop(1, '#00f2fe');
+        ctx.fillStyle = playerGrad;
+        ctx.beginPath(); ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+
+        // [렌더] 활성화된 고유 무기 시각화
+        if (selectedWeaponType === 'blade') {
+            let bx = player.x + Math.cos(weaponAngle) * 55;
+            let by = player.y + Math.sin(weaponAngle) * 55;
+            ctx.save();
+            ctx.shadowBlur = 12; ctx.shadowColor = "#00f2fe";
+            ctx.fillStyle = "#00f2fe";
+            ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+
+        // [렌더] 투사체 (레이저 / 미사일)
         bullets.forEach(b => {
-            ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.save();
+            if(b.type === 'laser') {
+                ctx.shadowBlur = 10; ctx.shadowColor = "#ff007f"; ctx.fillStyle = "#ff007f";
+                ctx.fillRect(b.x - 4, b.y - 4, 8, 8);
+            } else {
+                ctx.shadowBlur = 10; ctx.shadowColor = "#39ff14"; ctx.fillStyle = "#39ff14";
+                ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.restore();
         });
 
-        // 몬스터 그리기 (네온 핑크 원)
-        ctx.fillStyle = "#ff007f"; ctx.shadowColor = "#ff007f";
+        // [렌더] 에일리언 바이러스 적 유닛
         enemies.forEach(e => {
-            ctx.beginPath(); ctx.arc(e.x, e.y, e.size, 0, Math.PI*2); ctx.fill();
+            ctx.save();
+            ctx.shadowBlur = 6; ctx.shadowColor = "#ff3333";
+            ctx.fillStyle = "#ff3333";
+            ctx.beginPath();
+            // 약간 마름모 형태의 사이버틱 몬스터 형상화
+            ctx.moveTo(e.x, e.y - e.size);
+            ctx.lineTo(e.x + e.size, e.y);
+            ctx.lineTo(e.x, e.y + e.size);
+            ctx.lineTo(e.x - e.size, e.y);
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
         });
-        ctx.shadowBlur = 0; // 그림자 초기화
     }
 
     function gameOver(isTimeOut) {
@@ -204,12 +389,13 @@
         clearInterval(timerInterval);
         
         if(isTimeOut) {
-            alert("⚠️ 시스템 오류: 20분 한계 돌파. 섬멸 프로토콜에 의해 사망했습니다.");
+            alert("🚨 SYSTEM OVERLOAD :: 20분을 초과했습니다. 마그네틱 궤도 폭격으로 기지가 격침됩니다.");
         } else {
-            alert(`게임 오버! 당신은 ${document.getElementById('timer').innerText} 동안 생존했습니다.`);
+            let m = String(Math.floor(score / 60)).padStart(2, '0');
+            let s = String(score % 60).padStart(2, '0');
+            alert(`[MISSION FAILED]\n\n요원 ${username} (${studentId}) 사망.\n최종 생존 시간: ${m}분 ${s}초`);
         }
 
-        // 서버로 점수 전송
         fetch('/api/score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -218,7 +404,6 @@
         .then(res => res.json())
         .then(data => {
             updateLeaderboardUI(data.leaderboards);
-            // UI 복구
             document.getElementById('login-box').style.display = 'block';
             document.getElementById('ui-layer').style.display = 'none';
             canvas.style.display = 'none';
@@ -229,18 +414,19 @@
         const body = document.getElementById('leaderboard-body');
         body.innerHTML = '';
         if(!list || list.length === 0) {
-            body.innerHTML = `<tr><td colspan="4">등록된 기록이 없습니다. 첫 주인공이 되어보세요!</td></tr>`;
+            body.innerHTML = `<tr><td colspan="4" style="color:#64748b;">네트워크 데이터 없음</td></tr>`;
             return;
         }
         list.forEach((user, index) => {
             let min = String(Math.floor(user.score / 60)).padStart(2, '0');
             let sec = String(user.score % 60).padStart(2, '0');
+            let rankColor = index === 0 ? '#ffd700' : (index === 1 ? '#c0c0c0' : (index === 2 ? '#cd7f32' : '#e2e8f0'));
             body.innerHTML += `
-                <tr>
-                    <td>${index + 1}</td>
+                <tr style="color: ${rankColor}">
+                    <td style="font-family:'Orbitron'; font-weight:bold;">0${index + 1}</td>
                     <td>${user.studentId}</td>
                     <td>${user.name}</td>
-                    <td style="color: #ff7b72; font-weight:bold;">${min}:${sec}</td>
+                    <td style="font-family:'Orbitron'; font-weight:bold; color: #00f2fe;">${min}:${sec}</td>
                 </tr>`;
         });
     }
