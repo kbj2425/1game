@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PROJECT 20 : THE MULTI-ARMS</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Noto+Sans+KR:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=500;800&family=Noto+Sans+KR:wght@400;700&display=swap');
         
         body { 
             background-color: #050508; color: #e2e8f0; font-family: 'Noto Sans KR', sans-serif; 
@@ -66,6 +66,7 @@
 <body>
 
 <div class="container">
+    <!-- 1. 로그인 보드 -->
     <div id="login-box" class="box">
         <h1>PROJECT 20</h1>
         <div class="subtitle">TACTICAL MULTI-ARMS SYSTEMS</div>
@@ -81,10 +82,12 @@
         </table>
     </div>
 
+    <!-- 2. 인게임 상단 정보 스크린 -->
     <div id="weapon-status">WEAPONS: <span id="w-list">NONE</span></div>
     <div id="ui-layer">TIME <span id="timer">00:00</span></div>
     <canvas id="gameCanvas" width="440" height="650"></canvas>
 
+    <!-- 3. 탕탕특공대 방식 선택 팝업 레이어 -->
     <div id="upgrade-overlay">
         <div class="upgrade-title">PROTOCOL UPGRADE</div>
         <div style="color: #64748b; font-size:0.9rem;">새 무기 장착 또는 성능을 강화하십시오.</div>
@@ -98,14 +101,14 @@
     let gameInterval, timerInterval;
     let startTime, score = 0;
     let isPaused = false;
-    let nextUpgradeTime = 50; 
+    let nextUpgradeTime = 20; // ⭐ 첫 무기 선택 인터벌을 50초 -> 20초로 단축하여 파밍 속도 가속화
 
-    // 플레이어 이동 속도 및 피격 판정 최적화
+    // 플레이어 스펙 조정 (이동 및 탈출을 더 수월하게)
     let player = { 
         x: 220, y: 325, 
-        size: 12, 
+        size: 11, // 히트박스 아주 미세하게 축소
         vx: 0, vy: 0,      
-        maxSpeed: 4.8,    
+        maxSpeed: 5.0, // 이속 상향 (4.8 -> 5.0)   
         friction: 0.82     
     };
     
@@ -152,7 +155,7 @@
         canvas = document.getElementById('gameCanvas'); canvas.style.display = 'block';
         ctx = canvas.getContext('2d');
 
-        startTime = Date.now(); score = 0; nextUpgradeTime = 50; isPaused = false;
+        startTime = Date.now(); score = 0; nextUpgradeTime = 20; isPaused = false;
         enemies = []; bullets = []; particles = []; keys = {};
         myWeapons = { blade: 1, laser: 0, missile: 0, shield: 0 }; 
         player.x = canvas.width / 2; player.y = canvas.height / 2;
@@ -172,7 +175,7 @@
 
         if(score >= nextUpgradeTime) {
             triggerUpgradeEvent();
-            nextUpgradeTime += 50; 
+            nextUpgradeTime += 40; // 첫 업그레이드 이후에는 40초마다 획득
         }
     }
 
@@ -254,13 +257,13 @@
         player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
         player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
 
-        // 📊 초반 완화형 난이도 밸런서
-        let spawnChance = 0.015; 
-        let enemySpeed = 1.2;    
+        // 📊 [초보자 전용 핵앤슬래시 난이도 곡선 재설계]
+        let spawnChance = 0.009; // 초반 스폰 확률 대폭 차단 (완전 쾌적한 시작)
+        let enemySpeed = 1.0;    // 적 이속을 1.0으로 대폭 낮추어 완전 느림보로 설정
         
-        if (score >= 60)  { spawnChance = 0.05;  enemySpeed = 2.3; } 
-        if (score >= 420) { spawnChance = 0.10;  enemySpeed = 3.6; } 
-        if (score >= 780) { spawnChance = 0.18;  enemySpeed = 5.2; } 
+        if (score >= 60)  { spawnChance = 0.035; enemySpeed = 1.8; } // 1분 통과 시 아주 완만하게 상승
+        if (score >= 240) { spawnChance = 0.07;  enemySpeed = 2.8; } 
+        if (score >= 600) { spawnChance = 0.14;  enemySpeed = 4.2; } 
         if (score >= 1200){ gameOver(true); return; }
 
         // 적 유닛 출현
@@ -277,16 +280,17 @@
         // 무기 로직 가동
         weaponAngle += 0.04;
 
-        // 무기 1: 블레이드 (⭐ 초반 구슬 4개 장착 패치: 1레벨 기준 4개, 레벨당 1개씩 추가)
+        // 무기 1: 블레이드 (⭐ 무적의 초반 8구슬 장착 패치! 1레벨=8개, 레벨업 시 구슬 크기와 속도 강화 효과)
         if(myWeapons.blade > 0) {
-            let bladeCount = myWeapons.blade + 3; // 1렙 = 4개, 5렙 = 8개
-            let radius = 60 + (bladeCount * 2);
+            let bladeCount = 8; // 무조건 고정 8개 구슬 사방 호위
+            let radius = 62 + (myWeapons.blade * 2);
+            let hitRadius = 7 + myWeapons.blade; // 무기 레벨이 오르면 타격 판정 범위도 넓어짐
             for(let i=0; i<bladeCount; i++) {
                 let currentAngle = weaponAngle + (i * (Math.PI * 2 / bladeCount));
                 let bx = player.x + Math.cos(currentAngle) * radius;
                 let by = player.y + Math.sin(currentAngle) * radius;
                 enemies.forEach((e, eIdx) => {
-                    if(Math.hypot(e.x - bx, e.y - by) < e.size + 8) {
+                    if(Math.hypot(e.x - bx, e.y - by) < e.size + hitRadius) {
                         createExplosion(e.x, e.y, "#00f2fe", 4);
                         enemies.splice(eIdx, 1);
                     }
@@ -389,16 +393,17 @@
         pGrad.addColorStop(0, '#ffffff'); pGrad.addColorStop(1, '#00f2fe'); ctx.fillStyle = pGrad;
         ctx.beginPath(); ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill(); ctx.restore();
 
-        // 4개 구슬 비주얼 연출 렌더링
+        // 8개 구슬 화려하게 시각화 출력
         if(myWeapons.blade > 0) {
-            let bladeCount = myWeapons.blade + 3;
-            let radius = 60 + (bladeCount * 2);
+            let bladeCount = 8;
+            let radius = 62 + (myWeapons.blade * 2);
+            let renderSize = 5 + (myWeapons.blade * 0.5);
             for(let i=0; i<bladeCount; i++) {
                 let currentAngle = weaponAngle + (i * (Math.PI * 2 / bladeCount));
                 let bx = player.x + Math.cos(currentAngle) * radius;
                 let by = player.y + Math.sin(currentAngle) * radius;
-                ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = "#00f2fe"; ctx.fillStyle = "#00f2fe";
-                ctx.beginPath(); ctx.arc(bx, by, 6, 0, Math.PI*2); ctx.fill(); ctx.restore();
+                ctx.save(); ctx.shadowBlur = 12; ctx.shadowColor = "#00f2fe"; ctx.fillStyle = "#00f2fe";
+                ctx.beginPath(); ctx.arc(bx, by, renderSize, 0, Math.PI*2); ctx.fill(); ctx.restore();
             }
         }
 
