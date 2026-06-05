@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROJECT 20</title>
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: 'Malgun Gothic', sans-serif; text-align: center; margin: 0; padding: 0; }
+        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .box { background: #161b22; padding: 30px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        h1 { color: #58a6ff; margin-bottom: 20px; }
+        input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #30363d; background: #0d1117; color: white; text-align: center; }
+        button { padding: 10px 20px; border: none; border-radius: 5px; background: #238636; color: white; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2ea043; }
+        canvas { border: 2px solid #58a6ff; background: #000; display: none; margin-top: 10px; }
+        table { width: 100%; margin-top: 15px; border-collapse: collapse; }
+        th, td { padding: 8px; border-bottom: 1px solid #30363d; text-align: center; }
+        th { color: #58a6ff; }
+        #ui-layer { display: none; color: #ff7b72; font-size: 20px; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 1. 로그인 창 -->
+    <div id="login-box" class="box">
+        <h1>PROJECT 20</h1>
+        <p>인류의 마지막 요원원, 생존 시간을 기록하라.</p>
+        <input type="text" id="studentId" placeholder="학번 (예: 10325)" maxlength="5"><br>
+        <input type="text" id="username" placeholder="이름 (예: 홍길동)"><br><br>
+        <button onclick="startGame()">게임 시작</button>
+        
+        <h3>🏆 실시간 TOP 10 랭킹</h3>
+        <table>
+            <thead>
+                <tr><th>순위</th><th>학번</th><th>이름</th><th>생존 시간</th></tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+        </table>
+    </div>
+
+    <!-- 2. 게임 화면 -->
+    <div id="ui-layer">시간: <span id="timer">00:00</span></div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+</div>
+
+<script>
+    let studentId, username;
+    let canvas, ctx;
+    let gameInterval, timerInterval;
+    let startTime;
+    let score = 0; // 초 단위 생존 시간
+
+    // 게임에 필요한 객체들
+    let player = { x: 200, y: 300, size: 15, speed: 4 };
+    let enemies = [];
+    let bullets = [];
+    let keys = {};
+
+    // 페이지 로드 시 랭킹 가져오기
+    window.onload = function() {
+        fetch('/api/leaderboard')
+            .then(res => res.json())
+            .then(data => updateLeaderboardUI(data));
+        
+        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keyup', e => keys[e.key] = false);
+    };
+
+    function startGame() {
+        studentId = document.getElementById('studentId').value.trim();
+        username = document.getElementById('username').value.trim();
+
+        if(!studentId || !username) {
+            alert("학번과 이름을 올바르게 입력해주세요!");
+            return;
+        }
+
+        // UI 전환
+        document.getElementById('login-box').style.display = 'none';
+        document.getElementById('ui-layer').style.display = 'block';
+        canvas = document.getElementById('gameCanvas');
+        canvas.style.display = 'block';
+        ctx = canvas.getContext('2d');
+
+        // 변수 초기화
+        startTime = Date.now();
+        enemies = [];
+        bullets = [];
+        player.x = 200; player.y = 300;
+
+        // 루프 시작
+        gameInterval = setInterval(gameUpdate, 1000 / 60); // 60FPS
+        timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function updateTimer() {
+        let elapsed = Math.floor((Date.now() - startTime) / 1000);
+        score = elapsed;
+        
+        let min = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        let sec = String(elapsed % 60).padStart(2, '0');
+        document.getElementById('timer').innerText = `${min}:${sec}`;
+    }
+
+    function gameUpdate() {
+        // 1. 플레이어 이동 (WASD 또는 방향키)
+        if (keys['ArrowUp'] || keys['w'] || keys['W']) player.y -= player.speed;
+        if (keys['ArrowDown'] || keys['s'] || keys['S']) player.y += player.speed;
+        if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.x -= player.speed;
+        if (keys['ArrowRight'] || keys['d'] || keys['D']) player.x += player.speed;
+
+        // 화면 테두리 제한
+        player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
+        player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
+
+        // 2. 시간대별 난이도 곡선 적용 (7분~13분 밸런스 단축 테스트용 수치)
+        // 실제 밸런스를 적용하기 위해 score(초)에 따라 스폰 확률 조정
+        let spawnChance = 0.02; // 기본 2%
+        let enemySpeed = 1.5;
+
+        if (score >= 60) { spawnChance = 0.04; enemySpeed = 2.0; }  // 1분 경과
+        if (score >= 420) { spawnChance = 0.08; enemySpeed = 3.2; } // 7분 경과 (제1고비)
+        if (score >= 780) { spawnChance = 0.15; enemySpeed = 4.5; } // 13분 경과 (마의 구간)
+        if (score >= 1200) { gameOver(true); return; }              // 20분 정각 (강제 종료)
+
+        // 3. 몬스터 스폰
+        if (Math.random() < spawnChance) {
+            let side = Math.floor(Math.random() * 4);
+            let ex, ey;
+            if(side === 0) { ex = Math.random() * canvas.width; ey = -10; }
+            else if(side === 1) { ex = Math.random() * canvas.width; ey = canvas.height + 10; }
+            else if(side === 2) { ex = -10; ey = Math.random() * canvas.height; }
+            else { ex = canvas.width + 10; ey = Math.random() * canvas.height; }
+            enemies.push({ x: ex, y: ey, size: 10, speed: enemySpeed });
+        }
+
+        // 4. 무기 자동 공격 (가장 가까운 적에게 탄환 발사)
+        if (Math.random() < 0.05 && enemies.length > 0) {
+            // 사방으로 퍼지는 에너지 탄환 4개 발as사
+            bullets.push({ x: player.x, y: player.y, dx: 0, dy: -4 });
+            bullets.push({ x: player.x, y: player.y, dx: 0, dy: 4 });
+            bullets.push({ x: player.x, y: player.y, dx: -4, dy: 0 });
+            bullets.push({ x: player.x, y: player.y, dx: 4, dy: 0 });
+        }
+
+        // 5. 투사체 이동 및 충돌
+        bullets.forEach((b, bIdx) => {
+            b.x += b.dx; b.y += b.dy;
+            // 화면 밖으로 나가면 삭제
+            if(b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(bIdx, 1);
+        });
+
+        // 6. 몬스터 이동 및 충돌 검사
+        enemies.forEach((e, eIdx) => {
+            // 플레이어를 향해 추적
+            let dx = player.x - e.x;
+            let dy = player.y - e.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            e.x += (dx / dist) * e.speed;
+            e.y += (dy / dist) * e.speed;
+
+            // 플레이어와 충돌 시 사망 (게임 오버)
+            if (dist < player.size + e.size) {
+                gameOver(false);
+            }
+
+            // 총알과 충돌 시 몬스터 소멸
+            bullets.forEach((b, bIdx) => {
+                let bDx = b.x - e.x;
+                let bDy = b.y - e.y;
+                let bDist = Math.sqrt(bDx*bDx + bDy*bDy);
+                if (bDist < e.size + 5) {
+                    enemies.splice(eIdx, 1);
+                    bullets.splice(bIdx, 1);
+                }
+            });
+        });
+
+        // 7. 그리기 (Rendering)
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 플레이어 그리기 (네온 블루 박스)
+        ctx.fillStyle = "#58a6ff";
+        ctx.shadowBlur = 10; ctx.shadowColor = "#58a6ff";
+        ctx.fillRect(player.x - player.size, player.y - player.size, player.size*2, player.size*2);
+
+        // 총알 그리기 (네온 그린 원)
+        ctx.fillStyle = "#39ff14"; ctx.shadowColor = "#39ff14";
+        bullets.forEach(b => {
+            ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+        });
+
+        // 몬스터 그리기 (네온 핑크 원)
+        ctx.fillStyle = "#ff007f"; ctx.shadowColor = "#ff007f";
+        enemies.forEach(e => {
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.size, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.shadowBlur = 0; // 그림자 초기화
+    }
+
+    function gameOver(isTimeOut) {
+        clearInterval(gameInterval);
+        clearInterval(timerInterval);
+        
+        if(isTimeOut) {
+            alert("⚠️ 시스템 오류: 20분 한계 돌파. 섬멸 프로토콜에 의해 사망했습니다.");
+        } else {
+            alert(`게임 오버! 당신은 ${document.getElementById('timer').innerText} 동안 생존했습니다.`);
+        }
+
+        // 서버로 점수 전송
+        fetch('/api/score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentId, name: username, score })
+        })
+        .then(res => res.json())
+        .then(data => {
+            updateLeaderboardUI(data.leaderboards);
+            // UI 복구
+            document.getElementById('login-box').style.display = 'block';
+            document.getElementById('ui-layer').style.display = 'none';
+            canvas.style.display = 'none';
+        });
+    }
+
+    function updateLeaderboardUI(list) {
+        const body = document.getElementById('leaderboard-body');
+        body.innerHTML = '';
+        if(!list || list.length === 0) {
+            body.innerHTML = `<tr><td colspan="4">등록된 기록이 없습니다. 첫 주인공이 되어보세요!</td></tr>`;
+            return;
+        }
+        list.forEach((user, index) => {
+            let min = String(Math.floor(user.score / 60)).padStart(2, '0');
+            let sec = String(user.score % 60).padStart(2, '0');
+            body.innerHTML += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${user.studentId}</td>
+                    <td>${user.name}</td>
+                    <td style="color: #ff7b72; font-weight:bold;">${min}:${sec}</td>
+                </tr>`;
+        });
+    }
+</script>
+</body>
+</html>
