@@ -41,7 +41,7 @@
         #ui-layer { display: none; font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 800; color: #00f2fe; margin-bottom: 10px; }
         #weapon-status { display: none; color: #94a3b8; font-size: 12px; margin-bottom: 8px; font-family: 'Orbitron';}
 
-        /* 🔴 실시간 무기 업그레이드 무작위 선택창 (중요) */
+        /* 🔴 실시간 무기 업그레이드 무작위 선택창 */
         #upgrade-overlay {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(5, 5, 8, 0.85); backdrop-filter: blur(8px);
@@ -53,7 +53,7 @@
             background: #1e293b; border: 2px solid #334155; border-radius: 12px; padding: 15px;
             cursor: pointer; transition: 0.2s; text-align: left;
         }
-        .weapon-card:hover { border-color: #00f2fe; background: #24334d; transform: translateY(-2px); }
+        .upgrade-card:hover { border-color: #00f2fe; background: #24334d; transform: translateY(-2px); }
         .up-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 4px; font-family: 'Orbitron'; }
         .up-desc { font-size: 0.85rem; color: #94a3b8; }
 
@@ -66,7 +66,6 @@
 <body>
 
 <div class="container">
-    <!-- 1. 로그인 보드 -->
     <div id="login-box" class="box">
         <h1>PROJECT 20</h1>
         <div class="subtitle">TACTICAL MULTI-ARMS SYSTEMS</div>
@@ -82,12 +81,10 @@
         </table>
     </div>
 
-    <!-- 2. 인게임 상단 정보 스크린 -->
     <div id="weapon-status">WEAPONS: <span id="w-list">NONE</span></div>
     <div id="ui-layer">TIME <span id="timer">00:00</span></div>
     <canvas id="gameCanvas" width="440" height="650"></canvas>
 
-    <!-- 3. 탕탕특공대 방식 선택 팝업 레이어 -->
     <div id="upgrade-overlay">
         <div class="upgrade-title">PROTOCOL UPGRADE</div>
         <div style="color: #64748b; font-size:0.9rem;">새 무기 장착 또는 성능을 강화하십시오.</div>
@@ -101,25 +98,23 @@
     let gameInterval, timerInterval;
     let startTime, score = 0;
     let isPaused = false;
-    let nextUpgradeTime = 50; // 첫 무기 선택 시점 (초)
+    let nextUpgradeTime = 50; 
 
-    // 플레이어 기본 정보
-    let player = { x: 220, y: 325, size: 12, speed: 4.5 };
-    
-    // ⭐ 현재 보유 중인 무기 도감 및 레벨 시스템 (탕탕특공대 메커니즘)
-    // 최대 4개 보유 가능, 각 무기 맥스 5레벨
-    let myWeapons = {
-        blade: 1,    // 회전 칼날 (기본 지급)
-        laser: 0,    // 십자 레이저
-        missile: 0,  // 유도 탄환
-        shield: 0    // 전기 충격 수비막
+    // 🏎️ 플레이어 물리 기반 변수 (속속도 vx, vy와 마찰력 friction 도입)
+    let player = { 
+        x: 220, y: 325, 
+        size: 12, 
+        vx: 0, vy: 0,      
+        maxSpeed: 4.5,    
+        friction: 0.82     
     };
-
-    let enemies = []; let bullets = []; let particles = []; let keys = {};
+    
+    let myWeapons = { blade: 1, laser: 0, missile: 0, shield: 0 };
+    let enemies = []; let bullets = []; let particles = [];
+    let keys = {};
     let weaponAngle = 0;
     let laserTimer = 0, missileTimer = 0, shieldTimer = 0;
 
-    // 무기 전체 사양 데이터 정의
     const weaponDatabase = {
         blade: { name: "ORBITAL BLADE", desc: "주변을 돌며 접근하는 적을 베어냅니다.", color: "#00f2fe" },
         laser: { name: "CROSS QUANTUM LASER", desc: "십자 방향으로 관통 에너지 광선을 쏩니다.", color: "#ff007f" },
@@ -129,8 +124,22 @@
 
     window.onload = function() {
         fetch('/api/leaderboard').then(res => res.json()).then(data => updateLeaderboardUI(data));
-        window.addEventListener('keydown', e => keys[e.key] = true);
-        window.addEventListener('keyup', e => keys[e.key] = false);
+        
+        // ⌨️ 키보드 이벤트 리스너 교정 (한글/영문 대소문자 무관하게 key.toLowerCase() 처리)
+        window.addEventListener('keydown', e => {
+            const key = e.key.toLowerCase();
+            keys[key] = true;
+            if(["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)) {
+                e.preventDefault(); // 스크롤 방지
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            const key = e.key.toLowerCase();
+            keys[key] = false;
+        });
+
+        window.addEventListener('blur', () => { keys = {}; player.vx = 0; player.vy = 0; });
     };
 
     function startGame() {
@@ -144,11 +153,11 @@
         canvas = document.getElementById('gameCanvas'); canvas.style.display = 'block';
         ctx = canvas.getContext('2d');
 
-        // 상태 완전 리셋
         startTime = Date.now(); score = 0; nextUpgradeTime = 50; isPaused = false;
-        enemies = []; bullets = []; particles = [];
-        myWeapons = { blade: 1, laser: 0, missile: 0, shield: 0 }; // 블레이드 1렙 들고 출발
+        enemies = []; bullets = []; particles = []; keys = {};
+        myWeapons = { blade: 1, laser: 0, missile: 0, shield: 0 }; 
         player.x = canvas.width / 2; player.y = canvas.height / 2;
+        player.vx = 0; player.vy = 0;
 
         updateWeaponStatusUI();
         gameInterval = setInterval(gameUpdate, 1000 / 60);
@@ -162,31 +171,28 @@
         let sec = String(score % 60).padStart(2, '0');
         document.getElementById('timer').innerText = `${min}:${sec}`;
 
-        // ⭐ 탕탕특공대 핵심 규칙: 일정 시간(50초) 주기로 강화 선택창 발생
         if(score >= nextUpgradeTime) {
             triggerUpgradeEvent();
-            nextUpgradeTime += 50; // 다음 강화 타임 세팅
+            nextUpgradeTime += 50; 
         }
     }
 
-    // 상단 인터페이스 현재 무기 장착 상태 표기 리프레시
     function updateWeaponStatusUI() {
         let activeList = [];
         for (let key in myWeapons) {
-            if(myWeapons[key] > 0) {
-                activeList.push(`${key.toUpperCase()} Lv.${myWeapons[key]}`);
-            }
+            if(myWeapons[key] > 0) activeList.push(`${key.toUpperCase()} Lv.${myWeapons[key]}`);
         }
         document.getElementById('w-list').innerText = activeList.join(' | ');
     }
 
-    // 🎁 무기 업그레이드 선택 UI 이벤트 가동
     function triggerUpgradeEvent() {
         isPaused = true;
+        keys = {}; 
+        player.vx = 0; player.vy = 0;
+        
         const container = document.getElementById('upgrade-options-container');
         container.innerHTML = '';
 
-        // 전체 무기 중 랜덤하게 3가지 뽑아서 선택지로 노출
         let allKeys = Object.keys(weaponDatabase);
         let shuffled = allKeys.sort(() => 0.5 - Math.random()).slice(0, 3);
 
@@ -196,19 +202,14 @@
             let card = document.createElement('div');
             card.className = 'upgrade-card';
             
-            // 보유 상태에 따라 문구 매칭 변경
-            let label = currentLv === 0 ? "[NEW INSTAL]" : (isMax ? "[MAX LEVEL]" : `[UPGRADE Lv.${currentLv} -> ${currentLv+1}]`);
+            let label = currentLv === 0 ? "[NEW INSTALL]" : (isMax ? "[MAX LEVEL]" : `[UPGRADE Lv.${currentLv} -> ${currentLv+1}]`);
             card.innerHTML = `
                 <div class="up-name" style="color:${weaponDatabase[key].color}">${weaponDatabase[key].name} <span style="font-size:12px; color:#fff;">${label}</span></div>
                 <div class="up-desc">${weaponDatabase[key].desc}</div>
             `;
             
-            if(!isMax) {
-                card.onclick = () => applyUpgrade(key);
-            } else {
-                card.style.opacity = 0.4;
-                card.style.cursor = 'not-allowed';
-            }
+            if(!isMax) card.onclick = () => applyUpgrade(key);
+            else { card.style.opacity = 0.4; card.style.cursor = 'not-allowed'; }
             container.appendChild(card);
         });
 
@@ -219,6 +220,7 @@
         myWeapons[weaponKey]++;
         updateWeaponStatusUI();
         document.getElementById('upgrade-overlay').style.display = 'none';
+        keys = {}; 
         isPaused = false;
     }
 
@@ -232,25 +234,35 @@
     }
 
     function gameUpdate() {
-        if(isPaused) return; // 정지 레이어 체크
+        if(isPaused) return;
 
-        // 1. 플레이어 컨트롤러
-        if (keys['ArrowUp'] || keys['w'] || keys['W']) player.y -= player.speed;
-        if (keys['ArrowDown'] || keys['s'] || keys['S']) player.y += player.speed;
-        if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.x -= player.speed;
-        if (keys['ArrowRight'] || keys['d'] || keys['D']) player.x += player.speed;
+        // 🏎️ 물리 가속도 제어
+        let ax = 0; let ay = 0;
+        if (keys['arrowup'] || keys['w']) ay = -player.maxSpeed;
+        if (keys['arrowdown'] || keys['s']) ay = player.maxSpeed;
+        if (keys['arrowleft'] || keys['a']) ax = -player.maxSpeed;
+        if (keys['arrowright'] || keys['d']) ax = player.maxSpeed;
+
+        player.vx = ax === 0 ? player.vx * player.friction : ax;
+        player.vy = ay === 0 ? player.vy * player.friction : ay;
+
+        if (Math.abs(player.vx) < 0.1) player.vx = 0;
+        if (Math.abs(player.vy) < 0.1) player.vy = 0;
+
+        player.x += player.vx;
+        player.y += player.vy;
 
         player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
         player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
 
-        // 2. 난이도 조정 밸런서 (평균 7분 사망 곡선 유지)
+        // 2. 난이도 곡선 밸런서
         let spawnChance = 0.025; let enemySpeed = 1.6;
         if (score >= 60)  { spawnChance = 0.05;  enemySpeed = 2.3; }
-        if (score >= 420) { spawnChance = 0.10;  enemySpeed = 3.6; } // 7분 한계선
-        if (score >= 780) { spawnChance = 0.18;  enemySpeed = 5.2; } // 13분 초고수선
+        if (score >= 420) { spawnChance = 0.10;  enemySpeed = 3.6; } 
+        if (score >= 780) { spawnChance = 0.18;  enemySpeed = 5.2; } 
         if (score >= 1200){ gameOver(true); return; }
 
-        // 3. 외계 적 유닛 출현
+        // 3. 적 유닛 출현
         if (Math.random() < spawnChance) {
             let side = Math.floor(Math.random() * 4);
             let ex, ey;
@@ -261,35 +273,30 @@
             enemies.push({ x: ex, y: ey, size: 9, speed: enemySpeed });
         }
 
-        // ==========================================
-        // ⚔️ 활성화된 다중 무기 자동 루프 처리 연산
-        // ==========================================
+        // 무기 로직 가동
         weaponAngle += 0.04;
 
-        // 🟢 [무기 1] ORBITAL BLADE (상시 지속형)
+        // 무기 1: 블레이드
         if(myWeapons.blade > 0) {
-            let bladeCount = myWeapons.blade; // 레벨당 칼날 개수 증가
+            let bladeCount = myWeapons.blade;
             let radius = 55 + (bladeCount * 3);
             for(let i=0; i<bladeCount; i++) {
                 let currentAngle = weaponAngle + (i * (Math.PI * 2 / bladeCount));
                 let bx = player.x + Math.cos(currentAngle) * radius;
                 let by = player.y + Math.sin(currentAngle) * radius;
-
                 enemies.forEach((e, eIdx) => {
                     if(Math.hypot(e.x - bx, e.y - by) < e.size + 8) {
                         createExplosion(e.x, e.y, "#00f2fe", 4);
                         enemies.splice(eIdx, 1);
                     }
                 });
-                
-                // 루프 내에서 위치 시각화 데이터를 위해 별도 가상 렌더링을 그리기에서 구현
             }
         }
 
-        // 🔴 [무기 2] CROSS LASER (쿨타임 제어)
+        // 무기 2: 레이저
         if(myWeapons.laser > 0) {
             laserTimer++;
-            let cooldown = Math.max(20, 60 - (myWeapons.laser * 8)); // 고레벨일수록 엄청 빠르게 발사
+            let cooldown = Math.max(20, 60 - (myWeapons.laser * 8));
             if(laserTimer >= cooldown) {
                 bullets.push({ x: player.x, y: player.y, dx: 6, dy: 0, type: 'laser' });
                 bullets.push({ x: player.x, y: player.y, dx: -6, dy: 0, type: 'laser' });
@@ -299,12 +306,11 @@
             }
         }
 
-        // 🔵 [무기 3] HELLFIRE MISSILE (유도형)
+        // 무기 3: 미사일
         if(myWeapons.missile > 0) {
             missileTimer++;
             let cooldown = Math.max(30, 80 - (myWeapons.missile * 10));
             if(missileTimer >= cooldown && enemies.length > 0) {
-                // 레벨에 따라 다중 발사
                 for(let i=0; i<Math.min(3, myWeapons.missile); i++) {
                     bullets.push({ x: player.x, y: player.y, type: 'missile', targetIdx: i % enemies.length });
                 }
@@ -312,27 +318,23 @@
             }
         }
 
-        // 🟣 [무기 4] PLASMA FIELD (주변 범위 충격파 패시브)
+        // 무기 4: 플라즈마 실드
         if(myWeapons.shield > 0) {
             shieldTimer++;
-            if(shieldTimer >= 100) { // 주기적 방전 발생
+            if(shieldTimer >= 100) {
                 let range = 40 + (myWeapons.shield * 25);
-                createExplosion(player.x, player.y, "#e0aaff", 20); // 광역 파티클 이펙트
-                
+                createExplosion(player.x, player.y, "#e0aaff", 20);
                 enemies.forEach((e, eIdx) => {
-                    if(Math.hypot(e.x - player.x, e.y - player.y) < range) {
-                        enemies.splice(eIdx, 1);
-                    }
+                    if(Math.hypot(e.x - player.x, e.y - player.y) < range) enemies.splice(eIdx, 1);
                 });
                 shieldTimer = 0;
             }
         }
 
-        // 5. 발사체 포지션 연산
+        // 발사체 이동
         bullets.forEach((b, bIdx) => {
-            if (b.type === 'laser') {
-                b.x += b.dx; b.y += b.dy;
-            } else if (b.type === 'missile') {
+            if (b.type === 'laser') { b.x += b.dx; b.y += b.dy; } 
+            else if (b.type === 'missile') {
                 let target = enemies[b.targetIdx] || enemies[0];
                 if(target) {
                     let angle = Math.atan2(target.y - b.y, target.x - b.x);
@@ -342,23 +344,22 @@
             if(b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(bIdx, 1);
         });
 
-        // 6. 파티클 물리 감쇄
+        // 파티클 감쇄
         particles.forEach((p, pIdx) => {
             p.x += p.vx; p.y += p.vy; p.alpha -= 0.03;
             if(p.alpha <= 0) particles.splice(pIdx, 1);
         });
 
-        // 7. 몬스터 물리 및 사망 충돌 체크
+        // 적 추적 및 충돌
         enemies.forEach((e, eIdx) => {
             let dx = player.x - e.x; let dy = player.y - e.y; let dist = Math.hypot(dx, dy);
             e.x += (dx / dist) * e.speed; e.y += (dy / dist) * e.speed;
 
-            if (dist < player.size + e.size) gameOver(false); // 적 충돌 처리 사망
+            if (dist < player.size + e.size) gameOver(false);
 
             bullets.forEach((b, bIdx) => {
                 if (Math.hypot(b.x - e.x, b.y - e.y) < e.size + 6) {
                     if (b.type === 'missile') {
-                        // 스플래시 대미지 로직 구현: 폭발 반경 내부의 다른 적들도 연쇄 처리
                         enemies.forEach((subE, subIdx) => {
                             if(Math.hypot(subE.x - e.x, subE.y - e.y) < 45) {
                                 createExplosion(subE.x, subE.y, "#39ff14", 3);
@@ -368,30 +369,25 @@
                         bullets.splice(bIdx, 1);
                     } else if (b.type === 'laser') {
                         createExplosion(e.x, e.y, "#ff007f", 2);
-                        enemies.splice(eIdx, 1); // 관통형이므로 총알 소멸 안 시킴
+                        enemies.splice(eIdx, 1);
                     }
                 }
             });
         });
 
-        // ==========================================
-        // 🎨 8. 실시간 고해상도 그래픽 드로잉 파트
-        // ==========================================
+        // 고퀄리티 그래픽 렌더링
         ctx.fillStyle = "rgba(2, 2, 5, 0.25)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // [이펙트 파티클 레이어]
         particles.forEach(p => {
             ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); ctx.restore();
         });
 
-        // [플레이어 코어 레이어]
         ctx.save(); ctx.shadowBlur = 15; ctx.shadowColor = "#00f2fe";
         let pGrad = ctx.createRadialGradient(player.x, player.y, 2, player.x, player.y, player.size);
         pGrad.addColorStop(0, '#ffffff'); pGrad.addColorStop(1, '#00f2fe'); ctx.fillStyle = pGrad;
         ctx.beginPath(); ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill(); ctx.restore();
 
-        // [무기 연출 렌더링 1] 블레이드 그리기
         if(myWeapons.blade > 0) {
             let bladeCount = myWeapons.blade;
             let radius = 55 + (bladeCount * 3);
@@ -404,7 +400,6 @@
             }
         }
 
-        // [무기 연출 렌더링 2] 발사체 그리기
         bullets.forEach(b => {
             ctx.save();
             if(b.type === 'laser') {
@@ -417,7 +412,6 @@
             ctx.restore();
         });
 
-        // [적군 유도체 레이어]
         enemies.forEach(e => {
             ctx.save(); ctx.shadowBlur = 6; ctx.shadowColor = "#ff3333"; ctx.fillStyle = "#ff3333";
             ctx.beginPath(); ctx.moveTo(e.x, e.y - e.size); ctx.lineTo(e.x + e.size, e.y);
@@ -427,12 +421,14 @@
 
     function gameOver(isTimeOut) {
         clearInterval(gameInterval); clearInterval(timerInterval);
+        keys = {}; player.vx = 0; player.vy = 0;
+        
         if(isTimeOut) {
-            alert("🚨 SYSTEM OVERLOAD :: 20분 도달. 행성 정화 시스템 가동으로 작전 종료.");
+            alert("🚨 SYSTEM OVERLOAD :: 정화 시스템 작전 종료.");
         } else {
             let m = String(Math.floor(score / 60)).padStart(2, '0');
             let s = String(score % 60).padStart(2, '0');
-            alert(`[MISSION FAILED]\n요원 ${username} (${studentId}) 작전 중 전사.\n최종 생존 시간: ${m}분 ${s}초`);
+            alert(`[MISSION FAILED]\n요원 ${username} (${studentId}) 전사.\n최종 생존 시간: ${m}분 ${s}초`);
         }
 
         fetch('/api/score', {
